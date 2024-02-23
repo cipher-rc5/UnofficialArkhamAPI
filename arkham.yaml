@@ -1,0 +1,462 @@
+openapi: 3.0.3
+info:
+  title: Unofficial Arkham API - OpenAPI 3.0
+  description: |-
+    This is an unofficial version of the Arkham Intelligence API based on the OpenAPI 3.0 specification. 
+    Please download and use on your own local clients; it is not advisable to load any private API-Keys into non-local systems.
+    
+    Some useful links:
+    - [Arkham API Documentation](https://arkham-intelligence.notion.site/arkham-intelligence/Arkham-API-Access-9232652274854efaa8a67633a94a2595)
+    
+    Contact: 
+    - [Made by Cipher](https://twitter.com/Cipher0091)
+
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+
+
+externalDocs:
+  description: Find out more about Arkham Intelligence
+  url: http://arkhamintelligence.com
+
+
+servers:
+  - url: https://api.arkhamintelligence.com
+
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: API-Key
+
+  responses:
+    UnauthorizedError:
+      description: API key is missing or invalid
+      
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    BadRequestError:
+      description: Bad request parameters
+
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Bad Request
+
+    RateLimitError:
+      description: Too many requests in a given amount of time
+
+      headers:
+        X-RateLimit-Limit:
+          description: The maximum number of requests allowed in a time frame
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: The number of requests remaining in the current time frame
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: The time at which the current rate limit window resets in UTC epoch seconds
+          schema:
+            type: integer
+
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Rate limit exceeded
+
+
+security:
+  - ApiKeyAuth: []
+
+
+tags:
+  - name: Transfers
+    description: Operations about transfers
+  - name: Intelligence
+    description: Detailed insights about addresses
+  - name: History
+    description: Historical data for entities and addresses
+  - name: Portfolio
+    description: Portfolio data for entities and addresses
+  - name: Token
+    description: Information about token holders
+
+
+paths:
+  /transfers:
+    get:
+      tags:
+        - Transfers
+      summary: Get transfers
+      description: Returns transfers from entities/addresses
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: base
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Entities/addresses for transactions.
+
+        #Chains
+        - name: chains
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Supported chains `ethereum`,`bsc`,`polygon`,`arbitrum_one`, `avalanche`,`optimism`,`bitcoin`,`tron`,`base`,`flare`.
+        
+        #Transaction Flow
+        - name: flow
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Type `in` | `out` | `all`
+
+        #From and To Filters
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters by sender. Negate with `!`. 
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+
+        #Token Filter
+        - name: tokens
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by CoinGecko IDs or token addresses.
+          
+        #Time Filters
+        - name: timeGte
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Filter for transactions with a block_timstamp greater than or equal to a certain time.       
+        - name: timeLte
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Filter for transactions with a block_timstamp less than or equal to a certain time.
+        - name: timeLast
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by duration (e.g., `2d` for 2 days). Supported duration units are `s` (second), `m` (minute), `h` (hour), `d` (day), `w` (week), `M` (month) and `y` (year). "
+               
+        #Value Filters
+        - name: valueGte
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Transfers above this token unit value.             
+        - name: valueLte
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Transfers below this token unit value.
+        - name: usdGte
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Transfers above this USD value.
+        - name: usdLte
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Transfers below this USD value.
+
+        #Sorting
+        - name: sortKey
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['time', 'value', 'usd']
+          description: Sort results by this key. Options include `time`, `value`, and `usd`.
+        - name: sortDir
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['asc', 'desc']
+          description: Sort results in either ascending (`asc`) or descending (`desc`) order.
+
+       # Pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Determine the number of transfers to return. Default is 20, and maximum allowed is 10,000."
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Offset before returning results.
+
+
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+  
+
+  /transfers/histogram:
+    get:
+      summary: Get transfers histogram
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: base
+          in: query
+          required: true
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /intelligence/address/{address}:
+    get:
+      tags:
+        - Intelligence
+      summary: Get intelligence about an address
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /intelligence/address/{address}/all:
+    get:
+      tags:
+        - Intelligence
+      summary: Get all intelligence about an address
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /history/entity/{entity}:
+    get:
+      tags:
+        - History
+      summary: Get all history about an address
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /history/address/{address}:
+    get:
+      tags:
+        - History
+      summary: Get all history about an address
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /portfolio/entity/{entity}:
+    get:
+      tags:
+        - Portfolio
+      summary: Get portfolio data about a specific entity
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /portfolio/address/{address}:
+    get:
+      tags:
+        - Portfolio
+      summary: Get portfolio data about a specific address
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /token/holders/{pricing_id}:
+    get:
+      tags: 
+        - Token
+      summary: Get all token holders for a specific CoinGecko pricing id
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: pricing_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
+
+
+  /token/holders/{chain}/{address}:
+    get:
+      summary: Get all history about an address
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful response
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        429:
+          $ref: '#/components/responses/RateLimitError'
